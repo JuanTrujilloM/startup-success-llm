@@ -70,8 +70,8 @@ fraud-detection/
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/usuario/fraud-detection.git
-cd fraud-detection
+git git clone https://github.com/JuanTrujilloM/startup-success-llm.git
+cd startup-success-llm
 ```
 
 ### 2. Crear entorno e instalar dependencias
