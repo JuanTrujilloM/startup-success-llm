@@ -1,0 +1,22 @@
+# Secretos — NUNCA subir
+.env
+
+# Datos crudos (144 MB — descargar de Kaggle, ver README)
+data/raw/
+
+# Modelos pesados — reentrenar con notebooks
+models/checkpoints/*.pkl
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
