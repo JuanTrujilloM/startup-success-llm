@@ -5,6 +5,7 @@
 data/raw/
 
 # Modelos pesados — reentrenar con notebooks
+models/*.pkl
 models/checkpoints/*.pkl
 
 # Python
