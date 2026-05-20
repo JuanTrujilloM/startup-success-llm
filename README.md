@@ -1,10 +1,12 @@
-# Detección de Fraude Financiero + Explicación con LLM
+# Predicción de Éxito de Startups (Crunchbase) + Explicación con LLM
 
 > Proyecto Final — Inteligencia Artificial · Universidad EAFIT 2026-1
 
-Clasificación de transacciones fraudulentas con XGBoost + SMOTE sobre el dataset Credit Card Fraud (Kaggle). Un LLM genera explicaciones en lenguaje natural usando los valores SHAP como contexto.
+Este proyecto implementa un modelo de Machine Learning (**XGBoost Classifier**) entrenado sobre datos de startups de Crunchbase para predecir si una startup será exitosa (adquirida - `acquired`) o propensa a cerrar (`closed`). Para cerrar la brecha de confianza de los modelos de caja negra, el sistema calcula valores **SHAP** locales y los integra como contexto enriquecido en un **LLM** (vía la API gratuita de Groq), el cual genera explicaciones estructuradas en lenguaje natural en español con el rol de un analista de Capital de Riesgo (VC).
 
-**Pregunta de investigación:** ¿Puede un clasificador XGBoost detectar fraude con AUC > 0.95 y un LLM generar explicaciones comprensibles usando SHAP values como contexto?
+El proyecto se despliega a través de una **interfaz interactiva en Streamlit**.
+
+**Pregunta de investigación:** ¿Puede un clasificador XGBoost entrenado en datos de Crunchbase predecir el éxito de startups con alta confiabilidad y un LLM (Llama-3) generar narrativas explicativas claras y fieles usando valores SHAP locales como contexto?
 
 ---
 
@@ -28,39 +30,36 @@ Clasificación de transacciones fraudulentas con XGBoost + SMOTE sobre el datase
 ## Estructura del proyecto
 
 ```
-fraud-detection/
+startup-success-llm/
 ├── README.md
 ├── requirements.txt
+├── .env.example
 │
 ├── docs/
-│   └── informe_final.pdf          <- PDF compilado desde LaTeX (Overleaf)
+│   ├── informe_final.pdf          <- PDF compilado desde LaTeX (Overleaf)
+│   └── fig_*.png                  <- Gráficos exploratorios y curvas ROC
 │
 ├── notebooks/
-│   ├── 01_eda.ipynb               <- Análisis exploratorio
-│   ├── 02_preprocessing.ipynb     <- Limpieza, SMOTE, split
-│   ├── 03_modeling.ipynb          <- XGBoost, umbral, métricas
-│   ├── 04_shap_explainability.ipynb  <- SHAP waterfall, feature importance
-│   └── 05_llm_explanations.ipynb  <- Prompts + respuestas del LLM
+│   ├── 01_eda.ipynb               <- Análisis exploratorio de startups
+│   ├── 02_preprocessing.ipynb     <- Limpieza, escalamiento, split
+│   ├── 03_modeling.ipynb          <- Entrenamiento de XGBoost y Baseline (LogReg)
+│   ├── 04_shap_explainability.ipynb  <- Valores SHAP globales y locales
+│   └── 05_llm_explanations.ipynb  <- Generación de explicaciones de Groq (Llama-3)
 │
 ├── src/
-│   ├── data/
-│   │   └── preprocessing.py       <- Pipeline de limpieza reproducible
-│   ├── models/
-│   │   └── train.py               <- Entrenamiento XGBoost
-│   ├── evaluation/
-│   │   └── metrics.py             <- AUC-ROC, F1, Precision-Recall
 │   └── llm/
-│       └── explainer.py           <- Construcción de prompts + llamada al LLM
+│       └── explainer.py           <- Conectividad con Groq y prompt engineering
 │
 ├── data/
-│   ├── raw/                       <- creditcard.csv (descargar de Kaggle, ver abajo)
-│   └── processed/                 <- datos limpios generados por notebooks
+│   ├── raw/                       <- startup_data.csv (descargar de Kaggle, ver abajo)
+│   └── processed/                 <- Datos limpios (X_train.csv, X_test.csv, y_train.csv, y_test.csv, shap_values_test.csv)
 │
 ├── models/
-│   └── checkpoints/               <- xgboost_model.pkl (generado al entrenar)
+│   ├── checkpoints/               <- scaler.pkl (escalador de variables)
+│   └── xgboost_model.pkl          <- Pesos entrenados del clasificador
 │
 └── app/
-    └── main.py                    <- Demo Streamlit (opcional)
+    └── main.py                    <- Demo interactiva en Streamlit (explicación + SHAP)
 ```
 
 ---
@@ -70,7 +69,7 @@ fraud-detection/
 ### 1. Clonar el repositorio
 
 ```bash
-git git clone https://github.com/JuanTrujilloM/startup-success-llm.git
+git clone https://github.com/JuanTrujilloM/startup-success-llm.git
 cd startup-success-llm
 ```
 
@@ -78,47 +77,59 @@ cd startup-success-llm
 
 ```bash
 python -m venv venv
-source venv/bin/activate        # Linux/Mac
-# venv\Scripts\activate         # Windows
+# Activar entorno:
+# En Windows (PowerShell):
+venv\Scripts\Activate.ps1
+# En Linux/macOS:
+source venv/bin/activate
 
+# Instalar los paquetes principales:
 pip install -r requirements.txt
 ```
 
+*(Nota para Windows: si la instalación completa falla debido a límites de ruta larga de Windows con JupyterLab, puedes instalar únicamente el stack principal con: `pip install scikit-learn xgboost imbalanced-learn numpy pandas shap groq python-dotenv matplotlib seaborn plotly streamlit joblib scipy`)*
+
 ### 3. Descargar el dataset
 
-El dataset no está en el repo por su tamaño (144 MB). Descargarlo manualmente:
+El dataset original proviene de Kaggle y corresponde a datos históricos de startups de Crunchbase:
 
-1. Ir a https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
-2. Descargar `creditcard.csv`
-3. Colocarlo en `data/raw/creditcard.csv`
-
-O con la API de Kaggle:
-```bash
-kaggle datasets download -d mlg-ulb/creditcardfraud -p data/raw/ --unzip
-```
+1. Ir a [Startup Success Prediction en Kaggle](https://www.kaggle.com/datasets/manishkc06/startup-success-prediction)
+2. Descargar `startup_data.csv`
+3. Colocar el archivo en `data/raw/startup_data.csv`
 
 ### 4. Configurar la API del LLM (Groq — gratuita)
 
+Para generar las explicaciones en lenguaje natural, utilizamos la API de Groq (con el modelo `llama-3.1-8b-instant` o similar):
+
+1. Regístrate de manera 100% gratuita en [Groq Console](https://console.groq.com/keys).
+2. Crea una API Key y cópiala.
+3. Duplica el archivo `.env.example` y cámbiale el nombre a `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+4. Abre `.env` y define tu clave:
+   ```env
+   GROQ_API_KEY=tu_api_key_aqui
+   ```
+
+### 5. Artefactos locales (modelo y escalador)
+
+El **escalador** (`models/checkpoints/scaler.pkl`) ya está versionado en el repo para que Streamlit pueda normalizar entradas nuevas. El **modelo XGBoost** (`models/xgboost_model.pkl`) no se sube a Git; regenéralo con:
+
 ```bash
-# Crear cuenta gratis en https://console.groq.com/keys
-# Copiar la API key y crear el archivo .env:
-echo "GROQ_API_KEY=tu_api_key_aqui" > .env
+python scratch/recreate_model.py
 ```
 
-### 5. Ejecutar los notebooks en orden
+Si cambias el preprocesamiento y tienes `data/raw/startup_data.csv`, puedes regenerar también el escalador:
 
 ```bash
-jupyter notebook
+python scratch/recreate_scaler.py
 ```
 
-Correr en secuencia:
-1. `notebooks/01_eda.ipynb`
-2. `notebooks/02_preprocessing.ipynb`
-3. `notebooks/03_modeling.ipynb`
-4. `notebooks/04_shap_explainability.ipynb`
-5. `notebooks/05_llm_explanations.ipynb`
 
-### 6. (Opcional) Correr la app Streamlit
+### 6. Ejecutar la demo Streamlit
+
+Para lanzar el panel interactivo localmente:
 
 ```bash
 streamlit run app/main.py
@@ -128,21 +139,18 @@ streamlit run app/main.py
 
 ## Resultados principales
 
-| Modelo | AUC-ROC | F1 | Recall (fraude) |
-|--------|---------|-----|-----------------|
-| Baseline (mayoría) | 0.50 | 0.00 | 0.00 |
-| Logistic Regression | — | — | — |
-| XGBoost + SMOTE | — | — | — |
-
-*(completar con resultados reales)*
+| Modelo | AUC-ROC (Test) | Accuracy (Test) | F1-Score (Test) | Recall (Éxito) |
+|--------|----------------|-----------------|-----------------|----------------|
+| Baseline (LogReg) | 0.6120 | 0.6054 | — | — |
+| XGBoost + Hyperparameters | **0.8260** | **0.7892** | **0.8408** | **0.8583** |
 
 ---
 
 ## Stack tecnológico
 
-- **ML:** `scikit-learn`, `xgboost`, `imbalanced-learn` (SMOTE)
-- **Explicabilidad:** `shap`
-- **LLM:** `groq` (Llama-3.1-8b-instant, gratuito)
-- **Visualización:** `matplotlib`, `seaborn`, `plotly`
-- **App:** `streamlit`
+- **ML & Data:** `scikit-learn`, `xgboost`, `pandas`, `numpy`
+- **Explicabilidad:** `shap` (TreeExplainer)
+- **LLM API:** `groq` (Llama 3.1, gratuito y ultrarrápido)
+- **Visualización:** `matplotlib`, `seaborn`, `plotly` (gráficos interactivos)
+- **Frontend App:** `streamlit` (interfaz)
 - **Python:** 3.10+
