@@ -112,6 +112,12 @@ Para generar las explicaciones en lenguaje natural, utilizamos la API de Groq (c
    GROQ_API_KEY=tu_api_key_aqui
    ```
 
+Verifica la conexión con Groq (infraestructura LLM):
+
+```bash
+python scratch/test_groq_connection.py
+```
+
 ### 5. Artefactos locales (modelo y escalador)
 
 El **escalador** (`models/checkpoints/scaler.pkl`) ya está versionado en el repo para que Streamlit pueda normalizar entradas nuevas. El **modelo XGBoost** (`models/xgboost_model.pkl`) no se sube a Git; regenéralo con:
