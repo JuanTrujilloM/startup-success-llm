@@ -21,5 +21,3 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
-
-!models/checkpoints/scaler.pkl
