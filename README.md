@@ -36,6 +36,7 @@ startup-success-llm/
 │
 ├── docs/
 │   ├── informe_final.pdf             <- PDF compilado desde LaTeX (Overleaf)
+│   ├── guia_usuario.md               <- Guía de uso de la aplicación
 │   └── fig_*.png                     <- Gráficos exportados desde notebooks
 │
 ├── notebooks/
@@ -71,6 +72,8 @@ startup-success-llm/
 
 ## Instalación y ejecución
 
+> Flujo probado esperado: usar Python 3.10 o 3.11, instalar dependencias, regenerar el modelo si no existe y ejecutar la app con Streamlit. La API de Groq solo es necesaria para la pestaña **Informe IA**; el resto de la aplicación funciona sin esa clave.
+
 ### 1. Clonar el repositorio
 
 ```bash
@@ -80,11 +83,19 @@ cd startup-success-llm
 
 ### 2. Crear entorno e instalar dependencias
 
+Linux/macOS:
+
 ```bash
 python -m venv venv
-source venv/bin/activate        # Linux/macOS
-# venv\Scripts\Activate.ps1    # Windows PowerShell
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
+Windows PowerShell:
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
@@ -96,15 +107,27 @@ El dataset proviene de Kaggle (datos históricos de startups de Crunchbase):
 2. Descargar `startup_data.csv`
 3. Colocarlo en `data/raw/startup_data.csv`
 
-> Los datos procesados (`data/processed/`) ya están versionados en el repo, por lo que los notebooks 03–05 pueden ejecutarse sin el CSV original.
+> Los datos procesados (`data/processed/`) ya están versionados en el repo, por lo que la app, el script `scratch/recreate_model.py` y los notebooks 03–05 pueden ejecutarse sin el CSV original. El CSV crudo solo es necesario para reproducir desde cero el notebook 01, el notebook 02 o `scratch/recreate_scaler.py`.
 
-### 4. Configurar la API de Groq (gratuita)
+### 4. Configurar la API de Groq (opcional, gratuita)
+
+Este paso solo es obligatorio si se quiere usar la pestaña **Informe IA**.
 
 1. Crear cuenta en [console.groq.com](https://console.groq.com/keys) y generar una API Key.
 2. Copiar el archivo de ejemplo y definir la clave:
+
+   Linux/macOS:
+
    ```bash
    cp .env.example .env
    ```
+
+   Windows PowerShell:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
    ```env
    GROQ_API_KEY=tu_api_key_aqui
    ```
@@ -115,7 +138,7 @@ El dataset proviene de Kaggle (datos históricos de startups de Crunchbase):
 
 ### 5. Regenerar artefactos del modelo
 
-El escalador (`models/checkpoints/scaler.pkl`) ya está en el repo. El modelo XGBoost no se versiona por tamaño; regenéralo con:
+El escalador (`models/checkpoints/scaler.pkl`) ya está en el repo. Si `models/xgboost_model.pkl` no existe después de clonar el repositorio, regenéralo con:
 
 ```bash
 python scratch/recreate_model.py
@@ -129,14 +152,24 @@ streamlit run app/main.py
 
 La app abre en `http://localhost:8501` con dos modos de entrada (manual y aleatorio) y 5 pestañas de análisis: SHAP, Predicción, Perfil, Métricas del modelo e Informe IA.
 
+### 7. Verificación rápida
+
+Para comprobar que el código principal importa correctamente:
+
+```bash
+python -m py_compile app/main.py src/llm/explainer.py src/llm/evaluation.py scratch/recreate_model.py
+```
+
+Para instrucciones de uso de la interfaz, consultar [`docs/guia_usuario.md`](docs/guia_usuario.md).
+
 ---
 
 ## Resultados principales
 
 | Modelo | Accuracy | Precision | Recall | F1-Score | ROC-AUC |
 |--------|----------|-----------|--------|----------|---------|
-| Baseline (LogReg) | 60.5% | — | — | — | 0.612 |
-| **XGBoost** | **82.2%** | **84.5%** | **86.7%** | **85.6%** | **0.889** |
+| Baseline (LogReg) | — | 79.0% | 81.0% | 80.0% | 0.7927 |
+| **XGBoost** | **78.9%** | **82.4%** | **85.8%** | **84.1%** | **0.8241** |
 
 Dataset: 923 startups · Split 80/20 estratificado · SMOTE en train (477 vs 261 → 477/477)
 
@@ -151,4 +184,4 @@ Dataset: 923 startups · Split 80/20 estratificado · SMOTE en train (477 vs 261
 | LLM | `groq==1.0.0` · Llama-3.1-8b-instant (API gratuita) |
 | Visualización | `matplotlib`, `seaborn`, `plotly` |
 | App | `streamlit` |
-| Python | 3.10+ |
+| Python | 3.10 o 3.11 recomendado |

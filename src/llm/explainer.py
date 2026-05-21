@@ -57,6 +57,7 @@ SYSTEM_PROMPT = (
 
 class GroqConnectionError(RuntimeError):
     # Error al validar o usar la API de Groq
+    pass
 
 
 class StartupExplainer:
