@@ -1,9 +1,4 @@
-"""
-Regenera models/checkpoints/scaler.pkl replicando el notebook 02_preprocessing.
-
-Requiere: data/raw/startup_data.csv (Kaggle — ver README).
-No modifica data/processed/*.csv; solo recrea el StandardScaler ajustado en train (pre-SMOTE).
-"""
+# Regenera models/checkpoints/scaler.pkl replicando notebook 02 — requiere data/raw/startup_data.csv
 import os
 from pathlib import Path
 

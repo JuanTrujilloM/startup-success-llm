@@ -1,8 +1,6 @@
-"""
-StartupLens — Streamlit app for XGBoost startup success prediction
-with SHAP explainability and LLM-powered VC reports.
-"""
+# StartupLens — Streamlit demo: XGBoost + SHAP + Groq/Llama VC reports
 
+import sys
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -16,8 +14,11 @@ import matplotlib.cm as cm
 
 from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
-# ── Page config ──────────────────────────────────────────────────────────────
+from src.llm.explainer import StartupExplainer, GroqConnectionError
+
+# Page config
 st.set_page_config(
     page_title="StartupLens · VC Intelligence",
     page_icon="⬡",
@@ -25,7 +26,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Inject CSS ────────────────────────────────────────────────────────────────
+# Inject CSS
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&display=swap');
@@ -147,7 +148,7 @@ hr { border-color: var(--border) !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Constants ──────────────────────────────────────────────────────────────────
+# Constants
 FEATURE_COLS = [
     'age_first_funding_year','age_last_funding_year','age_first_milestone_year',
     'age_last_milestone_year','relationships','funding_rounds','funding_total_usd',
@@ -191,9 +192,9 @@ STATE_MAP = {
     "California (CA)": "is_CA","Nueva York (NY)": "is_NY",
     "Massachusetts (MA)": "is_MA","Texas (TX)": "is_TX","Otro": "is_otherstate",
 }
-MODEL_PATH  = PROJECT_ROOT / "models" / "xgboost_model.pkl"
+MODEL_PATH = PROJECT_ROOT / "models" / "xgboost_model.pkl"
 
-# ── Load model ────────────────────────────────────────────────────────────────
+# Load model
 @st.cache_resource
 def load_model():
     if not MODEL_PATH.exists():
@@ -205,11 +206,15 @@ def load_model():
         st.stop()
     return joblib.load(MODEL_PATH)
 
+@st.cache_resource
+def load_explainer() -> StartupExplainer:
+    return StartupExplainer()
+
 model = load_model()
 
-# ── Helper functions ──────────────────────────────────────────────────────────
+# Helper functions
 def build_row_from_inputs(inputs: dict) -> pd.DataFrame:
-    """Build a properly structured DataFrame row from UI inputs."""
+    # Build a properly structured DataFrame row from UI inputs
     row = {col: 0.0 for col in FEATURE_COLS}
     # Numeric
     for k in ['relationships','funding_rounds','funding_total_usd','milestones',
@@ -228,7 +233,7 @@ def build_row_from_inputs(inputs: dict) -> pd.DataFrame:
     return pd.DataFrame([row], columns=FEATURE_COLS)
 
 def scale_row(row_df: pd.DataFrame) -> pd.DataFrame:
-    """Standardize continuous columns using same logic as training (approximate at runtime)."""
+    # Standardize continuous columns — approximate scaler stats from training distribution
     # Approximate scaler stats from typical training distribution
     MEANS = {
         'funding_total_usd': 14_000_000,
@@ -252,20 +257,20 @@ def scale_row(row_df: pd.DataFrame) -> pd.DataFrame:
     return scaled
 
 def run_prediction(row_df: pd.DataFrame):
-    """Returns (probability, shap_values_dict, base_value)."""
+    # Returns (probability, shap_values_dict, base_value)
     scaled = scale_row(row_df)
     prob = float(model.predict_proba(scaled)[0][1])
     explainer = shap.TreeExplainer(model)
     shap_vals = explainer.shap_values(scaled)[0]
-    base_val  = float(explainer.expected_value)
+    base_val = float(explainer.expected_value)
     shap_dict = {col: float(shap_vals[i]) for i, col in enumerate(FEATURE_COLS)}
     return prob, shap_dict, base_val
 
 def random_startup() -> dict:
-    """Generate a random plausible startup input."""
+    # Generate a random plausible startup input
     rng = np.random.default_rng()
     sector = rng.choice(list(SECTOR_MAP.keys()))
-    state  = rng.choice(list(STATE_MAP.keys()))
+    state = rng.choice(list(STATE_MAP.keys()))
     rounds = int(rng.integers(1, 6))
     return {
         'relationships':          int(rng.integers(1, 40)),
@@ -288,12 +293,12 @@ def random_startup() -> dict:
         'has_roundD': rounds >= 5,
     }
 
-# ── Plotting helpers ──────────────────────────────────────────────────────────
+# Plotting helpers
 def plot_shap_waterfall(shap_dict: dict, base_value: float, prob: float, n=12):
-    """Custom cyberpunk waterfall / bar chart."""
+    # Custom waterfall / horizontal bar chart for SHAP contributions
     items = sorted(shap_dict.items(), key=lambda x: abs(x[1]), reverse=True)[:n]
     items = sorted(items, key=lambda x: x[1])
-    names  = [FEATURE_LABELS.get(k, k) for k, _ in items]
+    names = [FEATURE_LABELS.get(k, k) for k, _ in items]
     values = [v for _, v in items]
     colors = ['#ff3d71' if v < 0 else '#00e5a0' for v in values]
 
@@ -324,7 +329,7 @@ def plot_shap_waterfall(shap_dict: dict, base_value: float, prob: float, n=12):
     return fig
 
 def plot_probability_gauge(prob: float):
-    """Semicircular gauge."""
+    # Semicircular gauge for success probability
     fig, ax = plt.subplots(figsize=(4, 2.2), subplot_kw={'aspect': 'equal'})
     fig.patch.set_facecolor('#07080c')
     ax.set_facecolor('#07080c')
@@ -350,11 +355,11 @@ def plot_probability_gauge(prob: float):
     return fig
 
 def plot_shap_dot(shap_dict: dict, n=15):
-    """Dot plot showing top features by absolute SHAP impact."""
+    # Dot plot showing top features by absolute SHAP impact
     items = sorted(shap_dict.items(), key=lambda x: abs(x[1]), reverse=True)[:n]
     items_sorted = sorted(items, key=lambda x: x[1])
-    names  = [FEATURE_LABELS.get(k, k) for k, _ in items_sorted]
-    vals   = [v for _, v in items_sorted]
+    names = [FEATURE_LABELS.get(k, k) for k, _ in items_sorted]
+    vals = [v for _, v in items_sorted]
     colors = ['#ff3d71' if v < 0 else '#00e5a0' for v in vals]
 
     fig, ax = plt.subplots(figsize=(7, max(3.5, 0.45 * len(items_sorted))))
@@ -371,7 +376,7 @@ def plot_shap_dot(shap_dict: dict, n=15):
     plt.tight_layout()
     return fig
 
-# ── Sidebar ───────────────────────────────────────────────────────────────────
+# Sidebar
 with st.sidebar:
     st.markdown("""
     <div class="logo-area">
@@ -391,7 +396,7 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # ── Random mode ──────────────────────────────────────────────────────────
+    # Random mode
     if mode == "🎲  Generación aleatoria":
         st.markdown("### 🎲 Startup aleatoria")
         st.caption("Genera un perfil sintético de startup con valores realistas y evalúalo al instante.")
@@ -415,20 +420,20 @@ with st.sidebar:
             </div>
             """, unsafe_allow_html=True)
 
-    # ── Manual mode ──────────────────────────────────────────────────────────
+    # Manual mode
     else:
         st.markdown("### ✏️ Ingresar startup")
 
         with st.expander("📍 Ubicación & Sector", expanded=True):
             sector = st.selectbox("Sector", list(SECTOR_MAP.keys()), key="m_sector")
-            state  = st.selectbox("Estado", list(STATE_MAP.keys()), key="m_state")
+            state = st.selectbox("Estado", list(STATE_MAP.keys()), key="m_state")
 
         with st.expander("💰 Financiamiento", expanded=True):
-            funding_usd    = st.number_input("Total financiado (USD)", 0.0, 500_000_000.0, 2_000_000.0, step=100_000.0, key="m_fund")
+            funding_usd = st.number_input("Total financiado (USD)", 0.0, 500_000_000.0, 2_000_000.0, step=100_000.0, key="m_fund")
             funding_rounds = st.slider("Rondas de financiamiento", 1, 10, 2, key="m_rounds")
-            avg_part       = st.slider("Participantes/ronda (avg)", 1.0, 10.0, 3.0, 0.5, key="m_part")
-            col1, col2     = st.columns(2)
-            has_VC    = col1.checkbox("VC", True, key="m_vc")
+            avg_part = st.slider("Participantes/ronda (avg)", 1.0, 10.0, 3.0, 0.5, key="m_part")
+            col1, col2 = st.columns(2)
+            has_VC = col1.checkbox("VC", True, key="m_vc")
             has_angel = col2.checkbox("Angel", False, key="m_angel")
             col3, col4, col5, col6 = st.columns(4)
             has_rA = col3.checkbox("A", False, key="m_ra")
@@ -438,12 +443,12 @@ with st.sidebar:
 
         with st.expander("🚀 Operación", expanded=True):
             relationships = st.slider("Relaciones clave", 0, 60, 8, key="m_rel")
-            milestones    = st.slider("Hitos alcanzados", 0, 10, 2, key="m_miles")
-            is_top500     = st.checkbox("Listada en Top 500", False, key="m_top")
+            milestones = st.slider("Hitos alcanzados", 0, 10, 2, key="m_miles")
+            is_top500 = st.checkbox("Listada en Top 500", False, key="m_top")
 
         with st.expander("📅 Tiempo de maduración", expanded=False):
-            af  = st.number_input("Edad primer financiamiento (años)", -5.0, 20.0, 1.0, 0.5, key="m_af")
-            al  = st.number_input("Edad último financiamiento (años)", -5.0, 20.0, 3.0, 0.5, key="m_al")
+            af = st.number_input("Edad primer financiamiento (años)", -5.0, 20.0, 1.0, 0.5, key="m_af")
+            al = st.number_input("Edad último financiamiento (años)", -5.0, 20.0, 3.0, 0.5, key="m_al")
             amf = st.number_input("Edad primer hito (años)",           0.0,  20.0, 1.5, 0.5, key="m_amf")
             aml = st.number_input("Edad último hito (años)",           0.0,  20.0, 3.5, 0.5, key="m_aml")
 
@@ -478,7 +483,7 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-# ── Main content ──────────────────────────────────────────────────────────────
+# Main content
 st.markdown("""
 <h1 style='margin-bottom:0'>⬡ StartupLens</h1>
 <p style='color:#5a6a82; font-size:0.75rem; letter-spacing:2px; margin-top:0; margin-bottom:1.5rem'>
@@ -510,16 +515,16 @@ if 'run' not in st.session_state or not st.session_state.get('run'):
     st.info("← Elige un modo en la barra lateral y evalúa una startup.")
     st.stop()
 
-# ── Run prediction ─────────────────────────────────────────────────────────────
+# Run prediction
 inputs = st.session_state['inputs']
 row_df = build_row_from_inputs(inputs)
 prob, shap_dict, base_value = run_prediction(row_df)
 
-verdict       = "ÉXITO / ADQUISICIÓN" if prob >= 0.5 else "CIERRE / FRACASO"
+verdict = "ÉXITO / ADQUISICIÓN" if prob >= 0.5 else "CIERRE / FRACASO"
 verdict_color = "#00e5a0" if prob >= 0.5 else "#ff3d71"
-verdict_tag   = "tag-success" if prob >= 0.5 else "tag-fail"
+verdict_tag = "tag-success" if prob >= 0.5 else "tag-fail"
 
-# ── Header KPI row ────────────────────────────────────────────────────────────
+# Header KPI row
 kc1, kc2, kc3, kc4, kc5 = st.columns(5)
 with kc1:
     st.metric("PROB. ÉXITO", f"{prob*100:.1f}%")
@@ -538,15 +543,16 @@ with kc5:
 
 st.markdown("")
 
-# ── Tabs ──────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs([
+# Tabs
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "  📊  SHAP · Explicabilidad  ",
     "  🎯  Predicción  ",
     "  📋  Perfil de Startup  ",
-    "  📐  Métricas del Modelo  "
+    "  📐  Métricas del Modelo  ",
+    "  🤖  Informe IA  ",
 ])
 
-# ────── TAB 1 · SHAP ──────────────────────────────────────────────────────────
+# TAB 1 · SHAP
 with tab1:
     st.markdown("## Análisis de Explicabilidad SHAP")
 
@@ -573,7 +579,7 @@ with tab1:
         st.markdown("**✅ Factores positivos**")
         for feat, val in pos_items:
             label = FEATURE_LABELS.get(feat, feat)
-            pct   = val / (sum(v for v in shap_dict.values() if v > 0) + 1e-9)
+            pct = val / (sum(v for v in shap_dict.values() if v > 0) + 1e-9)
             st.markdown(f"""
             <div style='margin-bottom:8px'>
               <div style='display:flex;justify-content:space-between;font-size:0.75rem'>
@@ -590,7 +596,7 @@ with tab1:
         st.markdown("**⚠️ Factores de riesgo**")
         for feat, val in neg_items:
             label = FEATURE_LABELS.get(feat, feat)
-            pct   = abs(val) / (sum(abs(v) for v in shap_dict.values() if v < 0) + 1e-9)
+            pct = abs(val) / (sum(abs(v) for v in shap_dict.values() if v < 0) + 1e-9)
             st.markdown(f"""
             <div style='margin-bottom:8px'>
               <div style='display:flex;justify-content:space-between;font-size:0.75rem'>
@@ -611,7 +617,7 @@ with tab1:
         st.dataframe(shap_df, use_container_width=True, hide_index=True)
 
 
-# ────── TAB 2 · PREDICCIÓN ───────────────────────────────────────────────────
+# TAB 2 · PREDICCIÓN
 with tab2:
     st.markdown("## Resultado de Predicción")
 
@@ -651,7 +657,7 @@ with tab2:
     st.markdown("**Distribución de contribuciones SHAP (suma → log-odds)**")
     total_pos = sum(v for v in shap_dict.values() if v > 0)
     total_neg = abs(sum(v for v in shap_dict.values() if v < 0))
-    grand     = total_pos + total_neg + 1e-9
+    grand = total_pos + total_neg + 1e-9
 
     st.markdown(f"""
     <div style='margin-top:8px'>
@@ -668,7 +674,7 @@ with tab2:
     """, unsafe_allow_html=True)
 
 
-# ────── TAB 3 · PERFIL ───────────────────────────────────────────────────────
+# TAB 3 · PERFIL
 with tab3:
     st.markdown("## Perfil de la Startup Evaluada")
 
@@ -733,7 +739,7 @@ with tab3:
         )
 
 
-# ────── TAB 4 · MÉTRICAS DEL MODELO ─────────────────────────────────────────
+# TAB 4 · MÉTRICAS DEL MODELO
 with tab4:
     st.markdown("## Métricas del Modelo XGBoost")
 
@@ -753,7 +759,7 @@ with tab4:
     fig_fi, ax_fi = plt.subplots(figsize=(8, 4.5))
     fig_fi.patch.set_facecolor('#0e111a'); ax_fi.set_facecolor('#0e111a')
     names_fi = [FEATURE_LABELS.get(k,k) for k,_ in fi_sorted]
-    vals_fi  = [v for _,v in fi_sorted]
+    vals_fi = [v for _,v in fi_sorted]
     cmap_vals = np.linspace(0.3, 1.0, len(vals_fi))
     colors_fi = [cm.cool(c) for c in cmap_vals[::-1]]
     ax_fi.barh(names_fi, vals_fi, color=colors_fi, height=0.6)
@@ -807,3 +813,32 @@ with tab4:
              for k,v in fi_sorted],
         ).sort_values("Importancia", ascending=False)
         st.dataframe(fi_df, use_container_width=True, hide_index=True)
+
+
+# TAB 5 · INFORME IA
+with tab5:
+    st.markdown("## Informe Ejecutivo — Llama-3.1 vía Groq")
+    st.caption("El LLM actúa como analista senior de Venture Capital e interpreta la predicción y los valores SHAP en lenguaje ejecutivo.")
+
+    explanation_key = f"llm_report_{hash(str(sorted(inputs.items())))}"
+
+    if explanation_key in st.session_state:
+        st.markdown(st.session_state[explanation_key])
+        st.divider()
+        if st.button("Regenerar informe"):
+            del st.session_state[explanation_key]
+            st.rerun()
+    else:
+        st.info(f"Startup evaluada con probabilidad de éxito **{prob*100:.1f}%** · veredicto: **{verdict}**")
+        if st.button("Generar informe con IA", type="primary", use_container_width=True):
+            with st.spinner("Consultando Llama-3.1 vía Groq API..."):
+                try:
+                    report = load_explainer().explain_startup(
+                        row_df.iloc[0].to_dict(),
+                        shap_dict,
+                        prob,
+                    )
+                    st.session_state[explanation_key] = report
+                    st.rerun()
+                except GroqConnectionError as exc:
+                    st.error(f"Error Groq: {exc}")

@@ -1,9 +1,4 @@
-"""
-Prueba aislada de la infraestructura Groq 
-
-Ejecutar desde la raíz del proyecto:
-    python scratch/test_groq_connection.py
-"""
+# Prueba aislada de conexión Groq — ejecutar desde raíz: python scratch/test_groq_connection.py
 import sys
 from pathlib import Path
 

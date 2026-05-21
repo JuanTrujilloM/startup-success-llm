@@ -1,6 +1,4 @@
-"""
-Métricas cuantitativas para evaluar explicaciones del LLM frente a SHAP y la predicción.
-"""
+# Métricas cuantitativas para evaluar explicaciones del LLM frente a SHAP y la predicción
 from __future__ import annotations
 
 import re
@@ -33,7 +31,7 @@ ACTION_TERMS = ("recomend", "estrateg", "accion", "debería", "deberia", "suger"
 
 
 def select_representative_indices(y_proba: Any) -> dict[str, int]:
-    """Misma lógica que notebook 04_shap_explainability."""
+    # Misma lógica que notebook 04_shap_explainability
     import numpy as np
 
     proba = np.asarray(y_proba, dtype=float)
@@ -71,7 +69,7 @@ def _normalize(text: str) -> str:
 
 
 def score_verdict_alignment(explanation: str, success_probability: float) -> float:
-    """1.0 si el tono del texto coincide con la predicción; 0.5 ambiguo; 0.0 contradictorio."""
+    # 1.0 si el tono del texto coincide con la predicción; 0.5 ambiguo; 0.0 contradictorio
     text = _normalize(explanation)
     predicts_success = success_probability >= 0.5
     success_hits = sum(1 for t in SUCCESS_TERMS if t in text)
@@ -95,7 +93,7 @@ def score_shap_mention_rate(
     explanation: str,
     shap_values_dict: dict[str, float],
 ) -> float:
-    """Fracción de features SHAP relevantes (top ±) mencionadas en el texto."""
+    # Fracción de features SHAP relevantes (top ±) mencionadas en el texto
     pos_names, neg_names = top_shap_features(shap_values_dict)
     relevant = [n for n in pos_names + neg_names if n]
     if not relevant:
@@ -108,7 +106,7 @@ def score_shap_mention_rate(
 
 
 def score_actionability(explanation: str) -> float:
-    """1.0 si hay sección de recomendaciones con verbos de acción."""
+    # 1.0 si hay sección de recomendaciones con verbos de acción
     text = _normalize(explanation)
     has_section = bool(re.search(r"recomend|estrateg", text))
     has_actions = any(t in text for t in ACTION_TERMS)
@@ -120,7 +118,7 @@ def score_actionability(explanation: str) -> float:
 
 
 def score_structure(explanation: str) -> float:
-    """1.0 si detecta las 4 secciones esperadas del prompt."""
+    # 1.0 si detecta las 4 secciones esperadas del prompt
     text = _normalize(explanation)
     markers = [
         "resumen ejecutivo",
@@ -139,7 +137,7 @@ def evaluate_explanation(
     shap_values_dict: dict[str, float],
     success_probability: float,
 ) -> dict[str, float]:
-    """Scores automáticos en [0, 1] para el notebook y el informe."""
+    # Scores automáticos en [0, 1] para el notebook y el informe
     return {
         "verdict_alignment": score_verdict_alignment(explanation, success_probability),
         "shap_mention_rate": score_shap_mention_rate(explanation, shap_values_dict),

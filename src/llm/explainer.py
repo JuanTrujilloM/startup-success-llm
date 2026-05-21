@@ -1,13 +1,4 @@
-"""
-Infraestructura LLM — conexión Groq y construcción de prompts para explicaciones SHAP.
-
-Uso rápido:
-    from src.llm.explainer import StartupExplainer, GroqConnectionError
-
-    explainer = StartupExplainer()
-    explainer.validate_connection()
-    system, user = explainer.build_prompts(features, shap_values, 0.85)
-"""
+# Infraestructura LLM — cliente Groq y construcción de prompts SHAP para StartupExplainer
 from __future__ import annotations
 
 import os
@@ -65,11 +56,11 @@ SYSTEM_PROMPT = (
 
 
 class GroqConnectionError(RuntimeError):
-    """Error al validar o usar la API de Groq."""
+    # Error al validar o usar la API de Groq
 
 
 class StartupExplainer:
-    """Cliente Groq + prompts System/User a partir de SHAP locales."""
+    # Cliente Groq + prompts System/User a partir de SHAP locales
 
     def __init__(self, model_name: str = DEFAULT_MODEL, api_key: str | None = None):
         load_dotenv(PROJECT_ROOT / ".env")
@@ -89,12 +80,7 @@ class StartupExplainer:
         return self._client
 
     def validate_connection(self) -> str:
-        """
-        Comprueba API Key y cliente Groq con una petición mínima.
-
-        Raises:
-            GroqConnectionError: si falta la clave o la API rechaza la petición.
-        """
+        # Comprueba API Key y cliente Groq con una petición mínima; lanza GroqConnectionError si falla
         try:
             response = self.client.chat.completions.create(
                 messages=[{"role": "user", "content": "Responde solo: OK"}],
@@ -183,12 +169,7 @@ class StartupExplainer:
         shap_values_dict: dict[str, float],
         success_probability: float,
     ) -> tuple[str, str]:
-        """
-        Construye los mensajes System y User sin llamar a la API.
-
-        Returns:
-            (system_prompt, user_prompt)
-        """
+        # Construye los mensajes System y User sin llamar a la API; retorna (system_prompt, user_prompt)
         positive, negative = self._rank_shap_impacts(features_dict, shap_values_dict)
         pos_text = self._impacts_to_markdown(positive, "positive")
         neg_text = self._impacts_to_markdown(negative, "negative")
@@ -230,12 +211,7 @@ Redacta un informe de análisis de 4 secciones en Markdown:
         *,
         temperature: float = 0.4,
     ) -> str:
-        """
-        Genera la explicación narrativa vía Groq a partir de features y SHAP.
-
-        Raises:
-            GroqConnectionError: si la llamada a la API falla.
-        """
+        # Genera explicación narrativa vía Groq; lanza GroqConnectionError si la API falla
         system_prompt, user_prompt = self.build_prompts(
             features_dict, shap_values_dict, success_probability
         )
