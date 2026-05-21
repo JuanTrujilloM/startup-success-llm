@@ -22,8 +22,7 @@ El proyecto se despliega a través de **StartupLens**, una interfaz interactiva 
 
 ## Demo
 
-**Video demo:** [Link al video (YouTube/Drive/Loom)]  
-**App interactiva:** [Link a Streamlit Cloud (opcional)]
+**Video demo:** [Ver en Google Drive](https://drive.google.com/file/d/1M2IBgvLNv2Kt8kTV9EgoKDL8IiRVX55Z/view?usp=drivesdk)  
 
 ---
 
