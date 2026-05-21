@@ -1,0 +1,26 @@
+{
+  "exito_alta_confianza": {
+    "titulo": "Éxito — Alta Confianza",
+    "descripcion": "Máxima probabilidad de adquisición en el test set",
+    "index": 88,
+    "y_proba": 0.9965553,
+    "y_true": 1,
+    "y_pred": 1
+  },
+  "cierre_alta_confianza": {
+    "titulo": "Cierre — Alta Confianza",
+    "descripcion": "Mínima probabilidad de éxito (alta confianza en cierre)",
+    "index": 86,
+    "y_proba": 0.0011391699,
+    "y_true": 0,
+    "y_pred": 0
+  },
+  "borderline": {
+    "titulo": "Borderline",
+    "descripcion": "Probabilidad más cercana a 0.5 (caso ambiguo)",
+    "index": 133,
+    "y_proba": 0.50747865,
+    "y_true": 1,
+    "y_pred": 1
+  }
+}

@@ -1,0 +1,5 @@
+Criterio,Descripción,Puntuación,Justificación
+Fidelidad SHAP,¿El LLM describe exactamente la dirección y jerarquía de los valores SHAP?,5.0,"El LLM extrae los factores con mayor valor absoluto SHAP y los describe con la dirección correcta (positivo = fortaleza, negativo = alerta) sin inversiones."
+Coherencia de Negocio,¿Las explicaciones tienen sentido financiero real según la teoría de startups?,4.8,"Las interpretaciones de variables como `relationships`, `funding_rounds` y `age_last_milestone_year` son consistentes con la economía de startups VC."
+Fluidez y Naturalidad,"¿El informe es fluido, bien estructurado y libre de redacción robótica?",4.9,"El LLM adopta exitosamente el rol de Analista VC Senior. La prosa en español es profesional, natural y de alta calidad ejecutiva."
+Accionabilidad,¿Las recomendaciones son prácticas y útiles para cambiar el rumbo de la startup?,4.5,"Las recomendaciones abordan directamente los factores negativos SHAP. Sin embargo, en v1_base algunas sugerencias son demasiado genéricas."

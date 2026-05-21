@@ -1,0 +1,10 @@
+Caso,Versión,Veredicto Alin.,SHAP Mention Rate,Accionabilidad,Estructura,COMPOSITE,Temp.,Output (chars)
+Éxito — Alta Confianza,v1_base,1.0,1.0,1.0,1.0,1.0,0.4,2687
+Éxito — Alta Confianza,v2_mejorado,1.0,1.0,1.0,1.0,1.0,0.3,3620
+Éxito — Alta Confianza,v3_optimizado,1.0,1.0,1.0,1.0,1.0,0.2,4305
+Cierre — Alta Confianza,v1_base,1.0,1.0,1.0,1.0,1.0,0.4,2712
+Cierre — Alta Confianza,v2_mejorado,1.0,1.0,1.0,1.0,1.0,0.3,3648
+Cierre — Alta Confianza,v3_optimizado,1.0,1.0,1.0,1.0,1.0,0.2,3467
+Borderline,v1_base,1.0,0.9,1.0,1.0,0.965,0.4,3499
+Borderline,v2_mejorado,1.0,1.0,1.0,1.0,1.0,0.3,4363
+Borderline,v3_optimizado,1.0,1.0,1.0,1.0,1.0,0.2,4887
