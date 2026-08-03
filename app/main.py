@@ -1,5 +1,6 @@
 # StartupLens — Streamlit demo: XGBoost + SHAP + Groq/Llama VC reports
 
+import os
 import sys
 import streamlit as st
 import pandas as pd
@@ -25,6 +26,14 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Streamlit Cloud passes the key as a secret; the explainer reads os.environ and
+# falls back to .env locally. Reading st.secrets with no secrets.toml raises and
+# shows a warning banner, so check the file first.
+_SECRETS_FILES = (Path.home() / ".streamlit" / "secrets.toml",
+                  PROJECT_ROOT / ".streamlit" / "secrets.toml")
+if any(p.exists() for p in _SECRETS_FILES) and "GROQ_API_KEY" in st.secrets:
+    os.environ.setdefault("GROQ_API_KEY", st.secrets["GROQ_API_KEY"])
 
 # Inject CSS
 st.markdown("""

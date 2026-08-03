@@ -185,3 +185,36 @@ Dataset: 923 startups · Split 80/20 estratificado · SMOTE en train (477 vs 261
 | Visualización | `matplotlib`, `seaborn`, `plotly` |
 | App | `streamlit` |
 | Python | 3.10 o 3.11 recomendado |
+
+---
+
+## Despliegue en Streamlit Community Cloud
+
+La app se despliega gratis y sin tarjeta en [share.streamlit.io](https://share.streamlit.io).
+
+1. Entra con tu cuenta de GitHub y elige **Create app** → este repositorio.
+2. Configura:
+   - **Main file path:** `app/main.py`
+   - **Python version:** `3.11` (en *Advanced settings*). Es obligatorio:
+     `numpy==1.26.4` no tiene wheels para 3.12+ y la instalación falla.
+3. En *Advanced settings* → **Secrets**, pega tu clave de
+   [console.groq.com](https://console.groq.com/keys):
+
+   ```toml
+   GROQ_API_KEY = "gsk_..."
+   ```
+
+4. **Deploy**. El primer arranque tarda unos minutos instalando dependencias.
+
+Sin la clave la app funciona igual — predicción, métricas y gráficos SHAP — y
+solo la pestaña de informe LLM muestra un aviso de configuración.
+
+### Notas
+
+`models/xgboost_model.pkl` (285 KB) está versionado a propósito, como excepción
+al `.gitignore`: `app/main.py` lo carga al arrancar y sin él el despliegue no
+levanta. Se regenera con `notebooks/03_modeling.ipynb`.
+
+En local la clave se toma de `.env` vía `python-dotenv`; en la nube, del secreto
+de Streamlit. `app/main.py` puentea el segundo caso hacia `os.environ`, que es
+donde `src/llm/explainer.py` la busca.

@@ -4,9 +4,12 @@
 # Datos crudos (144 MB — descargar de Kaggle, ver README)
 data/raw/
 
-# Modelos pesados — reentrenar con notebooks
+# Modelos pesados — reentrenar con notebooks.
+# xgboost_model.pkl (285 KB) sí se versiona: la app lo carga al arrancar y sin
+# él el despliegue no levanta.
 models/*.pkl
 models/checkpoints/*.pkl
+!models/xgboost_model.pkl
 
 # Python
 __pycache__/
